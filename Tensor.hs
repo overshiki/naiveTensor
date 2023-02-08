@@ -1,3 +1,11 @@
+module Tensor (NaiveTensor, 
+                flattenOne, 
+                ones, 
+                range,
+                unwrap2list, 
+                flatten
+                ) where
+
 
 -- data type
 data NaiveTensor a = Tensor [NaiveTensor a] | Leaf a | Null deriving (Show)
