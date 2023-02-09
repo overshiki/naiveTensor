@@ -31,10 +31,12 @@ instance Monoid (NaiveTensor a) where
 
 -- Show
 instance Show a => Show (NaiveTensor a) where 
-    show (Leaf x) = (show x) ++ " "
-    show (Tensor x) =  (foldl (++) "[" ax) ++ "]" 
-        where 
-            ax = map show x
+    show (Leaf x) = show x
+    show (Tensor (x:xs)) =  (foldl scat init ax) ++ "]" 
+        where
+            scat x y = x ++ ", " ++ y
+            init = "[" ++ (show x) 
+            ax = map show xs
 
     show Null = "Null"
 
@@ -43,10 +45,6 @@ instance Show a => Show (NaiveTensor a) where
 from_list :: Num a => [a] -> NaiveTensor a 
 from_list x = Tensor (map Leaf x)
 
-from_general_list :: Num a => [b] -> NaiveTensor a 
-from_general_list ax@(x:xs) = case x of
-                        (y:ys)  -> Tensor (map from_general_list ax)
-                        _       -> Tensor (map Leaf ax)
 
 from_string :: [Char] -> NaiveTensor Int
 from_string x = from_list (read x ::[Int]) 
