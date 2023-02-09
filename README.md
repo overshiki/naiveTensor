@@ -1,7 +1,7 @@
-naive implementation of tensor data structure in `Haskell`
+naive implementation of tensor data structure in `Haskell/Ocaml`
 
-usage: 
-in `ghci`:
+### usage:
+For `Haskell`, in `ghci`:
 ```haskell
 :load Tensor
 import Tensor

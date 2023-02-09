@@ -8,7 +8,8 @@ module Tensor (NaiveTensor,
 
 
 -- data type
-data NaiveTensor a = Tensor [NaiveTensor a] | Leaf a | Null deriving (Show)
+data NaiveTensor a = Tensor [NaiveTensor a] | Leaf a | Null 
+-- deriving (Show)
 
 
 -- Monoid
@@ -28,21 +29,74 @@ instance Monoid (NaiveTensor a) where
     mempty = Null 
 
 
+-- Show
+instance Show a => Show (NaiveTensor a) where 
+    show (Leaf x) = (show x) ++ " "
+    show (Tensor x) =  (foldl (++) "[" ax) ++ "]" 
+        where 
+            ax = map show x
+
+    show Null = "Null"
+
+
+-- Read
+from_list :: Num a => [a] -> NaiveTensor a 
+from_list x = Tensor (map Leaf x)
+
+from_general_list :: Num a => [b] -> NaiveTensor a 
+from_general_list ax@(x:xs) = case x of
+                        (y:ys)  -> Tensor (map from_general_list ax)
+                        _       -> Tensor (map Leaf ax)
+
+from_string :: [Char] -> NaiveTensor Int
+from_string x = from_list (read x ::[Int]) 
+-- instance Read a => Read (NaiveTensor a) where
+--     read x@(xs:sx) = Tensor (map Leaf x)
+
+
 -- constructors
 tensor_repeat :: Num a => Int -> NaiveTensor a -> NaiveTensor a
 tensor_repeat x t = Tensor a where a = take x (repeat t)
 
+flattenX :: Num a => a -> Int -> NaiveTensor a 
+flattenX a l = tensor_repeat l (Leaf a)
+
+-- flattenOne x = tensor_repeat x (Leaf 1)
 flattenOne :: Num a => Int -> NaiveTensor a
-flattenOne x = tensor_repeat x (Leaf 1)
+flattenOne = flattenX 1
+
+flattenZero :: Num a => Int -> NaiveTensor a
+flattenZero = flattenX 0
+
+genX :: Num a => a -> ([Int] -> NaiveTensor a)
+genX a = _xs_func 
+    where 
+        _xs_func [x] = flattenX a x
+        _xs_func (x:xs) = tensor_repeat x (_xs_func xs)        
+
 
 ones :: Num a => [Int] -> NaiveTensor a 
-ones [x] = flattenOne x
-ones (x:xs) = tensor_repeat x (ones xs)
+ones = genX 1
+
+zeros :: Num a => [Int] -> NaiveTensor a 
+zeros = genX 0
+
+onehot :: Num a => Int -> Int -> NaiveTensor a 
+onehot l i = Tensor (map (construct i) [0..l-1])
+    where construct i k 
+                |i==k = Leaf 1
+                |otherwise = Leaf 0
+
+
 
 range :: (Num a, Eq a, Ord a) => a -> a -> NaiveTensor a
 range s e 
     | s < e = (range (s+1) e) <> (Leaf s)
     | s == e = Tensor []
+
+
+eye :: Num a => Int -> NaiveTensor a 
+eye l = Tensor (map (onehot l) [0..l-1])
 
 
 -- utils
@@ -67,16 +121,6 @@ flatten (Tensor (x:xs)) = foldl flatten_concat x xs
             flatten_concat (Tensor xx) ya@(Leaf yy) = Tensor (xx ++ [ya]) 
 
 
-
-
-
-
-len :: [a] -> Int
-len x = _len x 0
-    where
-        _len (x:xs) count = _len xs count+1
-        _len [] count = count
-
 -- take i'th element in each element of a list of NaiveTensor, wrap them into a new NaiveTensor
 ttake :: [NaiveTensor a] -> Int -> NaiveTensor a 
 ttake xa i = Tensor $ map (_ttake i) xa 
@@ -87,10 +131,10 @@ transpose :: NaiveTensor a -> NaiveTensor a
 transpose (Tensor xa@(x:xs)) = 
         Tensor $ map (ttake xa) [0..inner_len-1] 
     where 
-        inner_len = len $ unwrap2list $ x
+        inner_len = length $ unwrap2list $ x
 
 size :: NaiveTensor a -> [Int]
-size (Tensor xs) = [len xs] ++ (size $ xs !! 0)
+size (Tensor xs) = [length xs] ++ (size $ xs !! 0)
 size (Leaf x) = []
 
 bcall :: Num a => (NaiveTensor a -> NaiveTensor a -> NaiveTensor a) 
@@ -147,7 +191,7 @@ main = do
 
     print $ range 1 10
 
-    print $ len $ list1
+    print $ length $ list1
 
     print $ ori_tensor
     print $ trans_tensor
@@ -163,8 +207,19 @@ main = do
     print $ bproduct ori_tensor ori_tensor
     print $ badd ori_tensor ori_tensor
 
-    print $ lsum $ list1
+    print $ lsum list1
 
     print . size $ ori_tensor
     print $ bsum $ bproduct ori_tensor ori_tensor
     print $ sumproduct ori_tensor ori_tensor
+
+    print (ones [2,2,2])
+    print (zeros [2,2,2])
+
+    print (onehot 3 1)
+    print (eye 2)
+    print (eye 3)
+
+    print (from_list [1,2,3])
+    -- print $ (read [1,2,3]) :: NaiveTensor
+    print (from_string "[1,2,3]")
