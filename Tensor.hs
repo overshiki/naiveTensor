@@ -40,14 +40,20 @@ instance Show a => Show (NaiveTensor a) where
 
     show Null = "Null"
 
+-- Functor
+instance Functor NaiveTensor where
+    fmap f (Tensor x) = Tensor (map (fmap f) x)
+    fmap f (Leaf x)   = Leaf (f x)
+    fmap f Null       = Null
 
--- Read
-from_list :: Num a => [a] -> NaiveTensor a 
-from_list x = Tensor (map Leaf x)
+-- -- Read
+-- -- from_string x = from_list (read x ::[Int]) 
+-- from_string :: Num a => [Char] -> NaiveTensor a -> NaiveTensor a
+-- from_string (x:xs) a@(Tensor content)
+--         | x=="[" = Tensor (from_string xs [a])
+--         | x=="]" = Tensor content
+--         | otherwise = from_string xs (Tensor ([Leaf (read x)] ++ content))
 
-
-from_string :: [Char] -> NaiveTensor Int
-from_string x = from_list (read x ::[Int]) 
 -- instance Read a => Read (NaiveTensor a) where
 --     read x@(xs:sx) = Tensor (map Leaf x)
 
@@ -218,6 +224,8 @@ main = do
     print (eye 2)
     print (eye 3)
 
-    print (from_list [1,2,3])
+    -- print (from_list [1,2,3])
     -- print $ (read [1,2,3]) :: NaiveTensor
-    print (from_string "[1,2,3]")
+    -- print (from_string "[1,2,3]")
+
+    print(fmap ( + 2) (eye 2))
