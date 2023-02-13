@@ -1,3 +1,5 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Tensor (NaiveTensor, 
                 flattenOne, 
                 ones, 
@@ -6,6 +8,8 @@ module Tensor (NaiveTensor,
                 flatten
                 ) where
 
+import System.Random
+import Control.Monad (replicateM)
 
 -- data type
 data NaiveTensor a = Tensor [NaiveTensor a] | Leaf a | Null 
@@ -58,6 +62,12 @@ instance Functor NaiveTensor where
 --     read x@(xs:sx) = Tensor (map Leaf x)
 
 
+-- utils 
+size :: NaiveTensor a -> [Int]
+size (Tensor xs) = [length xs] ++ (size $ xs !! 0)
+size (Leaf x) = []
+
+
 -- constructors
 tensor_repeat :: Num a => Int -> NaiveTensor a -> NaiveTensor a
 tensor_repeat x t = Tensor a where a = take x (repeat t)
@@ -72,9 +82,26 @@ flattenOne = flattenX 1
 flattenZero :: Num a => Int -> NaiveTensor a
 flattenZero = flattenX 0
 
-genX :: Num a => a -> ([Int] -> NaiveTensor a)
+-- random constructor 
+flattenRandom :: Int -> IO (NaiveTensor Float)
+-- flattenRandom :: Int -> IO ([Float])
+flattenRandom x = do 
+    x <- replicateM x (randomIO :: IO Float)
+    return (Tensor (map Leaf x))
+    -- return x
+
+-- randn :: [Int] -> IO (NaiveTensor Float)
+-- randn [x] = flattenRandom x 
+-- randn (x:xs) = rand_repeat x (randn xs)
+--         where rand_repeat :: Int -> IO (NaiveTensor Float) -> IO (NaiveTensor Float)
+--             rand_repeat x (IO io_ntensor) = iocat $ map (randn (size io_ntensor)) [1..x]
+--             where iocat :: [IO (NaiveTensor Float)] -> IO (NaiveTensor Float)
+--                 iocat [IO x] = 
+
+genX :: forall a. Num a => a -> ([Int] -> NaiveTensor a)
 genX a = _xs_func 
     where 
+        _xs_func :: [Int] -> NaiveTensor a
         _xs_func [x] = flattenX a x
         _xs_func (x:xs) = tensor_repeat x (_xs_func xs)        
 
@@ -101,6 +128,8 @@ range s e
 
 eye :: Num a => Int -> NaiveTensor a 
 eye l = Tensor (map (onehot l) [0..l-1])
+
+
 
 
 -- utils
@@ -137,9 +166,6 @@ transpose (Tensor xa@(x:xs)) =
     where 
         inner_len = length $ unwrap2list $ x
 
-size :: NaiveTensor a -> [Int]
-size (Tensor xs) = [length xs] ++ (size $ xs !! 0)
-size (Leaf x) = []
 
 bcall :: Num a => (NaiveTensor a -> NaiveTensor a -> NaiveTensor a) 
                     -> NaiveTensor a -> NaiveTensor a 
@@ -229,3 +255,6 @@ main = do
     -- print (from_string "[1,2,3]")
 
     print(fmap ( + 2) (eye 2))
+
+    x <- flattenRandom 10
+    print x
