@@ -1,6 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Tensor (NaiveTensor, 
+module NTensor (NaiveTensor(..), 
                 flattenOne, 
                 ones, 
                 range,
@@ -82,21 +82,6 @@ flattenOne = flattenX 1
 flattenZero :: Num a => Int -> NaiveTensor a
 flattenZero = flattenX 0
 
--- random constructor 
-flattenRandom :: Int -> IO (NaiveTensor Float)
--- flattenRandom :: Int -> IO ([Float])
-flattenRandom x = do 
-    x <- replicateM x (randomIO :: IO Float)
-    return (Tensor (map Leaf x))
-    -- return x
-
--- randn :: [Int] -> IO (NaiveTensor Float)
--- randn [x] = flattenRandom x 
--- randn (x:xs) = rand_repeat x (randn xs)
---         where rand_repeat :: Int -> IO (NaiveTensor Float) -> IO (NaiveTensor Float)
---             rand_repeat x (IO io_ntensor) = iocat $ map (randn (size io_ntensor)) [1..x]
---             where iocat :: [IO (NaiveTensor Float)] -> IO (NaiveTensor Float)
---                 iocat [IO x] = 
 
 genX :: forall a. Num a => a -> ([Int] -> NaiveTensor a)
 genX a = _xs_func 
@@ -256,5 +241,3 @@ main = do
 
     print(fmap ( + 2) (eye 2))
 
-    x <- flattenRandom 10
-    print x
