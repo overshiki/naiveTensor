@@ -5,7 +5,8 @@ module NTensor (NaiveTensor(..),
                 ones, 
                 range,
                 unwrap2list, 
-                flatten
+                flatten,
+                wraplift
                 ) where
 
 import System.Random
@@ -122,6 +123,9 @@ unwrap2list :: NaiveTensor a -> [NaiveTensor a]
 unwrap2list (Tensor x) = x 
 unwrap2list xa@(Leaf x) = [xa]
 
+-- x -> Tensor [x]
+wraplift :: NaiveTensor a -> NaiveTensor a 
+wraplift x = Tensor [x]
 
 
 tconcat :: [NaiveTensor a] -> NaiveTensor a 
@@ -240,4 +244,5 @@ main = do
     -- print (from_string "[1,2,3]")
 
     print(fmap ( + 2) (eye 2))
+    print $ wraplift $ flattenOne 3
 
