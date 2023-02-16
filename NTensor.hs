@@ -1,12 +1,16 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module NTensor (NaiveTensor(..), 
-                flattenOne, 
-                ones, 
-                range,
+                flattenOne, ones, range,
                 unwrap2list, 
                 flatten,
-                wraplift
+                wraplift,
+                eye, zeros, onehot,
+                size,
+                bproduct, bsum, lsum, badd,
+                tconcat, t2concat,
+                sumproduct, fconcat,
+                transpose
                 ) where
 
 import System.Random
@@ -101,8 +105,8 @@ zeros = genX 0
 onehot :: Num a => Int -> Int -> NaiveTensor a 
 onehot l i = Tensor (map (construct i) [0..l-1])
     where construct i k 
-                |i==k = Leaf 1
-                |otherwise = Leaf 0
+                | i==k = Leaf 1
+                | otherwise = Leaf 0
 
 
 
@@ -114,8 +118,6 @@ range s e
 
 eye :: Num a => Int -> NaiveTensor a 
 eye l = Tensor (map (onehot l) [0..l-1])
-
-
 
 
 -- utils
@@ -147,6 +149,8 @@ flatten (Tensor (x:xs)) = foldl flatten_concat x xs
 ttake :: [NaiveTensor a] -> Int -> NaiveTensor a 
 ttake xa i = Tensor $ map (_ttake i) xa 
     where _ttake i x@(Tensor xxa) = xxa !! i
+            -- TODO: FIX THIS
+          _ttake i x@(Leaf a) = x
 
 
 transpose :: NaiveTensor a -> NaiveTensor a 
@@ -155,6 +159,33 @@ transpose (Tensor xa@(x:xs)) =
     where 
         inner_len = length $ unwrap2list $ x
 
+transposeAt :: Int -> NaiveTensor a -> NaiveTensor a 
+transposeAt s x@(Tensor xs)
+        | s==0 = transpose x 
+        | otherwise = Tensor (map (transposeAt $ s-1) xs)
+
+
+-- for example: when input [2,1,0], we want to specify in which order we should do transposeAt, the answer is [[0, 1], [1, 2], [0, 1]], so this function should return [0, 1, 0]
+-- the strategy is that we find the largest indices in the output, for example, in [2,1,0], we firstly find 0 at the position of 2. So that we want to pop it to the position 2, which should follow the path of [[0, 1], [1, 2]]. Doing so, the order of other indices does not change 
+-- then we pop the second largest on, by calling the function recursively
+transpose_schedule :: [Int] -> [Int]
+transpose_schedule x = _transpose_schedule (reverse x) ((length x)-2) 
+        where 
+            _transpose_schedule ax@(x:xs) _len = [x.._len] ++ (_transpose_schedule (shift x xs) (_len-1))
+            _transpose_schedule [] _ = []
+            shift x xs = map (_shift x) xs 
+                where 
+                    _shift x y
+                        | x < y     = y-1
+                        | otherwise = y 
+
+transposeFor :: [Int] -> NaiveTensor a -> NaiveTensor a
+transposeFor schedule x = _transposeFor (transpose_schedule schedule) x 
+        where 
+            _transposeFor (i:is) x = _transposeFor is (transposeAt i x)
+            _transposeFor [] x = x
+
+-- ready for sumproduct
 
 bcall :: Num a => (NaiveTensor a -> NaiveTensor a -> NaiveTensor a) 
                     -> NaiveTensor a -> NaiveTensor a 
@@ -180,69 +211,31 @@ lsum (ax@((Leaf x):xs)) = foldl badd (Leaf 0) ax
 
 bsum :: Num a => NaiveTensor a -> NaiveTensor a 
 bsum (Tensor xs) = Tensor (_sum xs) 
+    -- do pattern matching of list type using list constructor
     where _sum ax@((Leaf x):xs) = [lsum ax]
           _sum ax@((Tensor x):xs) = map bsum ax 
           
 sumproduct :: Num a => NaiveTensor a -> NaiveTensor a -> NaiveTensor a 
 sumproduct x y = bsum $ bproduct x y
 
+-- sumproductAt :: Num a => Int -> Int -> NaiveTensor a -> NaiveTensor a 
 
-ori_tensor = Tensor [(range 1 10), (range 1 10)]
-trans_tensor = transpose ori_tensor
-list1 = unwrap2list $ flatten $ ones [2, 2]
 
-main = do
-    print $ Tensor [Leaf 1, Leaf 2]
-    print $ Tensor [Leaf 1 | _<-[1..3]]
-    print $ flattenOne 3
 
-    print $ fconcat (flattenOne 3) (flattenOne 4)
-    -- sprint $ fconcat (flattenOne 3) (flattenOne 4)
+main :: IO ()
+main = do 
+    x <- return $ (wraplift $ ones [3]) <> (wraplift $ zeros [3])
+    print x 
 
-    print $ tconcat $ take 3 (repeat $ flattenOne 2)
+    y <- return $ transpose x 
+    print y    
+    y <- return $ transpose $ wraplift x 
+    print y    
+    y <- return $ transposeAt 1 (wraplift x) 
+    print y 
+    y <- return $ transposeAt 2 (wraplift x) 
+    print y 
 
-    print $ ones [2, 2]
-    print $ t2concat $ ones [2, 2]
-
-    print $ flatten $ ones [2, 2]
-
-    print $ flatten $ ones [2, 2, 2]
-
-    print $ range 1 10
-
-    print $ length $ list1
-
-    print $ ori_tensor
-    print $ trans_tensor
-
-    print $ size $ ori_tensor
-    print $ size $ trans_tensor
-
-    print $ mappend (flattenOne 3) (flattenOne 4)
-    print $ (flattenOne 3) <> (flattenOne 4)
-
-    print $ flatten $ ones [2, 2, 2, 2]
-
-    print $ bproduct ori_tensor ori_tensor
-    print $ badd ori_tensor ori_tensor
-
-    print $ lsum list1
-
-    print . size $ ori_tensor
-    print $ bsum $ bproduct ori_tensor ori_tensor
-    print $ sumproduct ori_tensor ori_tensor
-
-    print (ones [2,2,2])
-    print (zeros [2,2,2])
-
-    print (onehot 3 1)
-    print (eye 2)
-    print (eye 3)
-
-    -- print (from_list [1,2,3])
-    -- print $ (read [1,2,3]) :: NaiveTensor
-    -- print (from_string "[1,2,3]")
-
-    print(fmap ( + 2) (eye 2))
-    print $ wraplift $ flattenOne 3
-
+    print (transpose_schedule [2,1,0])
+    print $ wraplift x
+    print (transposeFor [0,2,1] (wraplift x))
