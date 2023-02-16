@@ -10,7 +10,7 @@ main = do
     print $ Tensor [Leaf 1 | _<-[1..3]]
     print $ flattenOne 3
 
-    print $ fconcat (flattenOne 3) (flattenOne 4)
+    -- print $ fconcat (flattenOne 3) (flattenOne 4)
     -- sprint $ fconcat (flattenOne 3) (flattenOne 4)
 
     print $ tconcat $ take 3 (repeat $ flattenOne 2)

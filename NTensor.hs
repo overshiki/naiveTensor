@@ -1,16 +1,14 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module NTensor (NaiveTensor(..), 
-                flattenOne, ones, range,
-                unwrap2list, 
-                flatten,
-                wraplift,
-                eye, zeros, onehot,
-                size,
+                flattenOne, ones, zeros, range,
+                eye, onehot,
+                size, ndim,
+                unwrap2list, flatten, wraplift,
                 bproduct, bsum, lsum, badd,
                 tconcat, t2concat,
-                sumproduct, fconcat,
-                transpose
+                sumproduct, sumproductAt,
+                transpose, transposeAt, transposeFor
                 ) where
 
 import System.Random
@@ -71,6 +69,9 @@ instance Functor NaiveTensor where
 size :: NaiveTensor a -> [Int]
 size (Tensor xs) = [length xs] ++ (size $ xs !! 0)
 size (Leaf x) = []
+
+ndim :: NaiveTensor a -> Int 
+ndim x = length $ size x
 
 
 -- constructors
@@ -214,12 +215,24 @@ bsum (Tensor xs) = Tensor (_sum xs)
     -- do pattern matching of list type using list constructor
     where _sum ax@((Leaf x):xs) = [lsum ax]
           _sum ax@((Tensor x):xs) = map bsum ax 
-          
+
+squeezeEnd :: NaiveTensor a -> NaiveTensor a 
+squeezeEnd (Tensor xs@((Tensor x):a)) = Tensor (map squeezeEnd xs)
+squeezeEnd as@(Tensor (xs@((Leaf x):(Leaf y):a))) = as 
+squeezeEnd (Tensor xs@([Leaf x])) = Leaf x
+
 sumproduct :: Num a => NaiveTensor a -> NaiveTensor a -> NaiveTensor a 
 sumproduct x y = bsum $ bproduct x y
 
--- sumproductAt :: Num a => Int -> Int -> NaiveTensor a -> NaiveTensor a 
-
+-- do sumproduct at index_a -> index_b -> NT_a -> NT_b 
+sumproductAt :: Num a => Int -> Int -> NaiveTensor a -> NaiveTensor a -> NaiveTensor a
+sumproductAt index_a index_b nt_a nt_b = squeezeEnd $ sumproduct x y 
+        where 
+            _size index nt = [0..index-1] ++ [index+1..(ndim nt)-1] ++ [index]
+            size_a = _size index_a nt_a
+            size_b = _size index_b nt_b 
+            x = transposeFor size_a nt_a 
+            y = transposeFor size_b nt_b
 
 
 main :: IO ()
@@ -239,3 +252,10 @@ main = do
     print (transpose_schedule [2,1,0])
     print $ wraplift x
     print (transposeFor [0,2,1] (wraplift x))
+    print $ ndim (transposeFor [0,2,1] (wraplift x))
+
+    x <- return $ ones [3,4,5]
+    y <- return $ ones [5,3,4]
+
+    z <- return $ sumproductAt 2 0 x y 
+    print $ size z    
