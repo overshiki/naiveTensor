@@ -242,7 +242,7 @@ main = do
 
     y <- return $ transpose x 
     print y    
-    y <- return $ transpose $ wraplift x 
+    y <- return . transpose $ wraplift x 
     print y    
     y <- return $ transposeAt 1 (wraplift x) 
     print y 
