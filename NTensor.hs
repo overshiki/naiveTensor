@@ -1,6 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module NTensor (NaiveTensor(..), 
+module NaiveTensor.NTensor (NaiveTensor(..), 
                 flattenOne, ones, zeros, range,
                 eye, onehot,
                 size, ndim,
@@ -8,7 +8,8 @@ module NTensor (NaiveTensor(..),
                 bproduct, bsum, lsum, badd,
                 tconcat, t2concat,
                 sumproduct, sumproductAt,
-                transpose, transposeAt, transposeFor
+                transpose, transposeAt, transposeFor,
+                get_content, tsum
                 ) where
 
 import System.Random
@@ -210,6 +211,13 @@ badd (Leaf x) (Leaf y) = Leaf (x+y)
 lsum :: Num a => [NaiveTensor a] -> NaiveTensor a
 lsum (ax@((Leaf x):xs)) = foldl badd (Leaf 0) ax
 
+get_content :: Num a => NaiveTensor a -> a 
+get_content (Leaf x) = x
+
+tsum :: Num a => NaiveTensor a -> a 
+tsum (Tensor ax@((Leaf x):xs)) = sum (map get_content ax)
+tsum (Tensor ax@((Tensor x):xs)) = sum (map tsum ax)
+
 bsum :: Num a => NaiveTensor a -> NaiveTensor a 
 bsum (Tensor xs) = Tensor (_sum xs) 
     -- do pattern matching of list type using list constructor
@@ -259,3 +267,5 @@ main = do
 
     z <- return $ sumproductAt 2 0 x y 
     print $ size z    
+
+    print $ tsum (ones [2,2,2])
