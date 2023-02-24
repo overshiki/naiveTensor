@@ -9,14 +9,15 @@ module NaiveTensor.NTensor (NaiveTensor(..),
                 tconcat, t2concat,
                 sumproduct, sumproductAt,
                 transpose, transposeAt, transposeFor,
-                get_content, tsum
+                get_content, tsum,
+                tselect, cartesian
                 ) where
 
 import System.Random
 import Control.Monad (replicateM)
 
 -- data type
-data NaiveTensor a = Tensor [NaiveTensor a] | Leaf a | Null 
+data NaiveTensor a = Tensor [NaiveTensor a] | Leaf a | Null  deriving (Eq)
 -- deriving (Show)
 
 
@@ -122,7 +123,31 @@ eye :: Num a => Int -> NaiveTensor a
 eye l = Tensor (map (onehot l) [0..l-1])
 
 
--- utils
+
+-- utils with fmap
+
+listlift :: NaiveTensor a -> NaiveTensor [a]
+listlift nt = fmap (\x -> [x]) nt
+
+tappend :: a -> NaiveTensor [a] -> NaiveTensor [a]
+tappend item nt = fmap (\x->item:x) nt
+
+cartesian :: [[a]] -> NaiveTensor [a] 
+cartesian (x:y:xs) = Tensor (tp x remain) 
+        where 
+            _len = length x 
+            remain = take _len (repeat (cartesian (y:xs)))
+            _tappend xis ps i = tappend (xis !! i) (ps !! i)
+            tp xis ps = map (_tappend xis ps) [0..(length xis)-1]
+
+cartesian [xs] = listlift $ Tensor (map Leaf xs)
+
+
+
+
+
+
+
 unwrap2list :: NaiveTensor a -> [NaiveTensor a] 
 unwrap2list (Tensor x) = x 
 unwrap2list xa@(Leaf x) = [xa]
@@ -153,6 +178,13 @@ ttake xa i = Tensor $ map (_ttake i) xa
     where _ttake i x@(Tensor xxa) = xxa !! i
             -- TODO: FIX THIS
           _ttake i x@(Leaf a) = x
+
+
+-- select by indices 
+tselect :: [Int] -> (NaiveTensor a) -> a 
+tselect (i:is) (Tensor xs) = tselect is (xs !! i)
+tselect [] (Leaf x) = x
+
 
 
 transpose :: NaiveTensor a -> NaiveTensor a 
@@ -187,6 +219,14 @@ transposeFor schedule x = _transposeFor (transpose_schedule schedule) x
             _transposeFor (i:is) x = _transposeFor is (transposeAt i x)
             _transposeFor [] x = x
 
+
+
+
+
+
+
+
+
 -- ready for sumproduct
 
 bcall :: Num a => (NaiveTensor a -> NaiveTensor a -> NaiveTensor a) 
@@ -203,26 +243,31 @@ bproduct :: Num a => NaiveTensor a -> NaiveTensor a -> NaiveTensor a
 bproduct (Tensor xs) (Tensor ys) = bcall bproduct (Tensor xs) (Tensor ys)
 bproduct (Leaf x) (Leaf y) = Leaf (x*y)
 
-
+-- broadcast add
 badd :: Num a => NaiveTensor a -> NaiveTensor a -> NaiveTensor a 
 badd (Tensor xs) (Tensor ys) = bcall badd (Tensor xs) (Tensor ys)
 badd (Leaf x) (Leaf y) = Leaf (x+y)
 
+
 lsum :: Num a => [NaiveTensor a] -> NaiveTensor a
 lsum (ax@((Leaf x):xs)) = foldl badd (Leaf 0) ax
 
+-- back door for Leaf 
 get_content :: Num a => NaiveTensor a -> a 
 get_content (Leaf x) = x
 
+-- reduce sum to Num 
 tsum :: Num a => NaiveTensor a -> a 
 tsum (Tensor ax@((Leaf x):xs)) = sum (map get_content ax)
 tsum (Tensor ax@((Tensor x):xs)) = sum (map tsum ax)
 
+-- broadcast sum 
 bsum :: Num a => NaiveTensor a -> NaiveTensor a 
 bsum (Tensor xs) = Tensor (_sum xs) 
     -- do pattern matching of list type using list constructor
     where _sum ax@((Leaf x):xs) = [lsum ax]
           _sum ax@((Tensor x):xs) = map bsum ax 
+
 
 squeezeEnd :: NaiveTensor a -> NaiveTensor a 
 squeezeEnd (Tensor xs@((Tensor x):a)) = Tensor (map squeezeEnd xs)
@@ -241,6 +286,9 @@ sumproductAt index_a index_b nt_a nt_b = squeezeEnd $ sumproduct x y
             size_b = _size index_b nt_b 
             x = transposeFor size_a nt_a 
             y = transposeFor size_b nt_b
+
+
+
 
 
 main :: IO ()
@@ -269,3 +317,12 @@ main = do
     print $ size z    
 
     print $ tsum (ones [2,2,2])
+
+    print $ tselect [1,1,1] (ones [2,2,2])
+
+    print $ ((ones [2,2])::(NaiveTensor Float))
+
+    print $ listlift $ ones [2,2]
+    print $ tappend 1 (listlift $ ones [2,2])
+
+    print $ cartesian [["a","b"], ["c", "d"]]

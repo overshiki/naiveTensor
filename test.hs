@@ -1,4 +1,4 @@
-import NTensor
+import NaiveTensor.NTensor
 
 
 ori_tensor = Tensor [(range 1 10), (range 1 10)]
@@ -28,6 +28,7 @@ main = do
     print $ (flattenOne 3) <> (flattenOne 4)
     print . flatten $ ones [2, 2, 2, 2]
     print $ bproduct ori_tensor ori_tensor
+    print "badd"
     print $ badd ori_tensor ori_tensor
     print $ lsum list1
     print . size $ ori_tensor
