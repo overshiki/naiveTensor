@@ -1,5 +1,8 @@
-{-# LANGUAGE ScopedTypeVariables #-}
-import NTensor 
+-- {-# LANGUAGE ScopedTypeVariables #-}
+module NaiveTensor.NTRand (flattenRandom,
+                            randn
+                    ) where
+import NaiveTensor.NTensor 
 import System.Random
 import Control.Monad (replicateM)
 
