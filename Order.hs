@@ -1,73 +1,100 @@
-module NaiveTensor.Order (IndexInBetween(..),
-                matchSelect, find_inBetween
+module NaiveTensor.Order (
+            find_inBetween_index
             ) where 
 import NaiveTensor.NTensor
 
 data Order = DFS | BFS
-data IndexInBetween = Index Int | AllBelow | AllAbove | OutRange deriving (Eq, Show)
+-- data IndexInBetween = Index Int | Below | Above deriving (Eq, Show)
+data OneHot = Hot | Cold deriving (Eq, Show)
 
-add :: IndexInBetween -> IndexInBetween -> IndexInBetween
-add (Index x) (Index y) = Index (x+y)
-add AllBelow (Index x) = Index x 
-add AllBelow _ = OutRange
-add (Index x) AllAbove = OutRange
-add (Index x) _ = Index x
-add OutRange (Index x) = Index x 
-add AllAbove _ = OutRange
-add OutRange _ = OutRange
+union :: [OneHot] -> OneHot
+union (Hot:xs) = Hot 
+union (Cold:xs) = union xs 
+union [] = Cold
 
-match :: IndexInBetween -> IndexInBetween
-match (Index x) = Index x 
-match OutRange = OutRange
-match AllAbove = OutRange
-match AllBelow = OutRange
+-- add :: IndexInBetween -> IndexInBetween -> IndexInBetween
+-- add (Index x) (Index y) = Index (x+y)
+-- add Below (Index x) = Index x 
+-- add _ Above = Above
+-- add (Index x) _ = Index x
 
-union :: [IndexInBetween] -> IndexInBetween
-union (x:xs) = foldl add x xs 
-union [] = OutRange
+-- -- list [a] should be ordered smaller2larger:left2right
+-- index_inBetween :: Ord a => a -> [a] -> IndexInBetween
+-- index_inBetween target (x:xs)
+--         | target < x  = Below
+--         | target >= x = (Index 1) `add` (index_inBetween target xs)
+-- index_inBetween target [] = Above
 
-matchInBetween :: [IndexInBetween] -> IndexInBetween
-matchInBetween (OutRange:xs) = (Index 1) `add` matchInBetween xs
-matchInBetween (x@(Index _x):xs) = Index 1
-matchInBetween [] = AllAbove
+-- match :: Ord a => [a] -> IndexInBetween -> Int 
+-- match xs (Index x) = x 
+-- match xs Below = 0 
+-- match xs Above = length xs
 
-matchSelect :: IndexInBetween -> [a] -> Maybe a 
-matchSelect (Index i) xs = Just (xs !! i)
-matchSelect _ _ = Nothing
+-- match_index_inBetween :: Ord a => a -> [a] -> Int 
+-- match_index_inBetween target xs = match xs (index_inBetween target xs)
 
--- list [a] should be ordered smaller2larger:left2right
-_index_inBetween :: Ord a => a -> [a] -> IndexInBetween
-_index_inBetween target (x:xs)
-        | target < x  = AllBelow
-        | target >= x = (Index 1) `add` (_index_inBetween target xs)
-_index_inBetween target [] = AllAbove
+-- matchOneHot :: IndexInBetween -> OneHot 
+-- matchOneHot (Index x) = Hot 
+-- matchOneHot Below = Cold 
+-- matchOneHot Above = Cold 
 
-index_inBetween :: Ord a => a -> [a] -> IndexInBetween
-index_inBetween target xs = match $ _index_inBetween target xs
 
-find_inBetween :: Ord a => a -> (NaiveTensor a) -> [IndexInBetween]
-find_inBetween i (Tensor ax@(x@(Leaf _x):xs)) = [xx]
-        where
-            xx = index_inBetween i (map get_content ax)
+_onehot_inBetween :: Ord a => a -> [a] -> OneHot -> [OneHot]
+_onehot_inBetween t (x:xs) h
+            | t < x = h:(_onehot_inBetween t xs Cold)
+            | t >= x = Cold:(_onehot_inBetween t xs h)
+_onehot_inBetween t [] h = []
 
-find_inBetween i (Tensor ax@(x@(Tensor _x):xs)) = index:(find_inBetween i next_a)
+onehot_inBetween :: Ord a => a -> [a] -> [OneHot]
+onehot_inBetween t (x:xs)
+            | t < x = _onehot_inBetween t xs Cold 
+            | t >= x = _onehot_inBetween t xs Hot 
+onehot_inBetween t [] = []
+
+onehot_index :: [OneHot] -> Int 
+onehot_index (Hot:xs) = 0
+onehot_index (Cold:xs) = 1 + (onehot_index xs)
+onehot_index [] = 0
+
+find_inBetween :: Ord a => a -> (NaiveTensor a) -> [[OneHot]]
+find_inBetween i (Tensor ax@(x@(Leaf _x):xs)) = (onehot_inBetween i (map get_content ax)):[]
+
+find_inBetween i (Tensor ax@(x@(Tensor _x):xs)) = nonehot:(find_inBetween i next_a)
         where 
-            minusOne (Index i) = Index (i-1)
-            (ind:indices) = map (find_inBetween i) ax 
-            nindices = foldl (++) ind indices
-            index = minusOne $ matchInBetween nindices
-            unpack (Just x) = x
-            next_a = unpack $ matchSelect index ax
+            (ind:indices) = map ((map union) . (find_inBetween i)) ax 
+            nonehot = foldl (++) ind indices
+            index = onehot_index nonehot
+            next_a = ax !! index
+
+find_inBetween_index :: Ord a => a -> (NaiveTensor a) -> [Int]
+find_inBetween_index i xs = xx 
+        where 
+            onehot = find_inBetween i xs 
+            xx = map onehot_index onehot
 
 
 main :: IO ()
 main = do 
     let xs = [1,2,3,4,5,6]
-    print $ index_inBetween 4 xs
-    print $ index_inBetween 7 xs
+    print $ onehot_inBetween 0 xs
+    print $ onehot_inBetween 4 xs
+    print $ onehot_inBetween 7 xs
+    print $ onehot_inBetween 8 xs
+
+    print . onehot_index $ onehot_inBetween 0 xs
+    print . onehot_index $ onehot_inBetween 4 xs
+    print . onehot_index $ onehot_inBetween 7 xs
+    print . onehot_index $ onehot_inBetween 8 xs
+
     let nt = range 1 10
     print nt
     print $ find_inBetween 6 nt
+
+    let nt = range 11 20
+    print nt
+    print $ find_inBetween 6 nt
+
     let nnt = Tensor [(range 1 10), (range 11 20)]
     print nnt
     print $ find_inBetween 6 nnt
+    print $ find_inBetween_index 6 nnt
