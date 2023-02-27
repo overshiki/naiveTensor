@@ -86,7 +86,7 @@ flattenZero :: Num a => Int -> NaiveTensor a
 flattenZero = flattenX 0
 
 
-genX :: Num a => a -> ([Int] -> NaiveTensor a)
+genX :: forall a. Num a => a -> ([Int] -> NaiveTensor a)
 genX a = _xs_func 
     where 
         _xs_func :: [Int] -> NaiveTensor a
@@ -110,7 +110,7 @@ onehot l i = Tensor (map (construct i) [0..l-1])
 
 range :: (Num a, Eq a, Ord a) => a -> a -> NaiveTensor a
 range s e 
-    | s < e = (range (s+1) e) <> (Leaf s)
+    | s < e = (Leaf s) <> (range (s+1) e)
     | s == e = Tensor []
 
 
@@ -159,7 +159,7 @@ tselect (i:is) (Tensor xs) = tselect is (xs !! i)
 tselect [] (Leaf x) = x
 
 -- back door for Leaf 
-get_content :: Num a => NaiveTensor a -> a 
+get_content :: NaiveTensor a -> a 
 get_content (Leaf x) = x
 
 
