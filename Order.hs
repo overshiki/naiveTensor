@@ -12,32 +12,6 @@ union (Hot:xs) = Hot
 union (Cold:xs) = union xs 
 union [] = Cold
 
--- add :: IndexInBetween -> IndexInBetween -> IndexInBetween
--- add (Index x) (Index y) = Index (x+y)
--- add Below (Index x) = Index x 
--- add _ Above = Above
--- add (Index x) _ = Index x
-
--- -- list [a] should be ordered smaller2larger:left2right
--- index_inBetween :: Ord a => a -> [a] -> IndexInBetween
--- index_inBetween target (x:xs)
---         | target < x  = Below
---         | target >= x = (Index 1) `add` (index_inBetween target xs)
--- index_inBetween target [] = Above
-
--- match :: Ord a => [a] -> IndexInBetween -> Int 
--- match xs (Index x) = x 
--- match xs Below = 0 
--- match xs Above = length xs
-
--- match_index_inBetween :: Ord a => a -> [a] -> Int 
--- match_index_inBetween target xs = match xs (index_inBetween target xs)
-
--- matchOneHot :: IndexInBetween -> OneHot 
--- matchOneHot (Index x) = Hot 
--- matchOneHot Below = Cold 
--- matchOneHot Above = Cold 
-
 
 _onehot_inBetween :: Ord a => a -> [a] -> OneHot -> [OneHot]
 _onehot_inBetween t (x:xs) h
