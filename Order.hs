@@ -47,6 +47,14 @@ find_inBetween_index i xs = xx
             xx = map onehot_index onehot
 
 
+accumulate :: Num a => (NaiveTensor a) -> (NaiveTensor a)
+accumulate (Tensor ax@(x1@(Leaf x):x2:xs)) = Tensor (x1:(accumulate $ (add x1 x2):xs))
+            where 
+                add (Leaf x1) (Leaf x2) = Leaf (x1+x2)
+
+accumulate (Tensor ax@(x1@(Tensor x):x2:xs) = 
+
+
 main :: IO ()
 main = do 
     let xs = [1,2,3,4,5,6]
