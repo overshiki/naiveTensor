@@ -1,5 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-
+-- {-# LANGUAGE ExplicitForAll #-}
+-- {-# LANGUAGE RankNTypes #-}
+-- nested_apply :: forall a b. (Ord a, Ord b) => (a -> a -> a) -> (NaiveTensor b) -> b
 -- f :: [a] -> [a]
 f :: forall a. [a] -> [a]
 f xs = ys ++ ys
