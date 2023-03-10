@@ -4,7 +4,7 @@ module NaiveTensor.NTensor (NaiveTensor(..),
                 flattenOne, ones, zeros, range,
                 eye, onehot,
                 size, ndim,
-                unwrap2list, flatten, wraplift,
+                unwrap2list, flatten, wraplift, flatten2list, list2flatten,
                 tconcat, t2concat,
                 get_content, tsum,
                 tselect
@@ -162,8 +162,12 @@ tselect [] (Leaf x) = x
 get_content :: NaiveTensor a -> a 
 get_content (Leaf x) = x
 
+flatten2list :: NaiveTensor a -> [a]
+flatten2list (Tensor ax@((Leaf x):xs)) = map get_content ax
+flatten2list nt@(Tensor ax@((Tensor x):xs)) = flatten2list (flatten nt)
 
-
+list2flatten :: [a] -> NaiveTensor a 
+list2flatten xs = Tensor (map Leaf xs)
 
 main :: IO ()
 main = do 

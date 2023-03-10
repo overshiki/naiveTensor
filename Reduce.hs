@@ -18,18 +18,6 @@ reduceHead :: (a -> a -> a) -> (NaiveTensor a) -> (NaiveTensor a)
 reduceHead reduceFunc ta@(Tensor ax@((Leaf x):xs)) = ta 
 reduceHead reduceFunc (Tensor ax@((Tensor x):xs)) = Tensor (map (Leaf . (reduceAll reduceFunc)) ax)
 
-
--- reduceOnce :: ([a] -> a) -> (NaiveTensor a) -> (NaiveTensor a)
--- reduceOnce reduceFunc (Tensor ax@((Leaf x):xs)) = Leaf (reduceFunc (map get_content ax))
--- reduceOnce reduceFunc (Tensor ax@((Tensor x):xs)) = Tensor (map (reduceOnce reduceFunc) ax)
-
--- reduceAll :: ([a] -> a) -> (NaiveTensor a) -> (NaiveTensor a)
--- reduceAll reduceFunc 
-
--- reduceHead :: ([a] -> a) -> (NaiveTensor a) -> (NaiveTensor a) 
--- reduceHead reduceFunc 
-
-
 main :: IO ()
 main = do 
     let nnt = Tensor [(range 1 10), (range 11 20)]
