@@ -4,12 +4,14 @@ module NaiveTensor.NTensor (NaiveTensor(..),
                 flattenOne, ones, zeros, range,
                 eye, onehot,
                 size, ndim,
+                reshape, fromList,
                 unwrap2list, flatten, wraplift, flatten2list, list2flatten,
                 tconcat, t2concat,
                 get_content, tsum,
                 tselect
                 ) where
 
+import NaiveTensor.Utils
 import System.Random
 import Control.Monad (replicateM)
 
@@ -126,10 +128,6 @@ tsum (Tensor ax@((Tensor x):xs)) = sum (map tsum ax)
 
 
 
-
-
-
-
 unwrap2list :: NaiveTensor a -> [NaiveTensor a] 
 unwrap2list (Tensor x) = x 
 unwrap2list xa@(Leaf x) = [xa]
@@ -169,6 +167,22 @@ flatten2list nt@(Tensor ax@((Tensor x):xs)) = flatten2list (flatten nt)
 list2flatten :: [a] -> NaiveTensor a 
 list2flatten xs = Tensor (map Leaf xs)
 
+-- ATTENTION: rev_reshape should start with flattern tensor, for this reason, I will not export this method
+_rev_reshape :: [Int] -> NaiveTensor a -> NaiveTensor a  
+_rev_reshape (num:ls) nt@(Tensor ax) = _rev_reshape ls nnt
+            where
+                nnt = Tensor (map Tensor (groupBy num ax)) 
+_rev_reshape [] nt = nt
+
+-- only do xs in (x:xs) because x in automatically acheived 
+reshape :: [Int] -> NaiveTensor a -> NaiveTensor a 
+reshape (x:xs) nt = _rev_reshape (reverse xs) (flatten nt)
+
+fromList :: [Int] -> [a] -> NaiveTensor a 
+fromList shape values = reshape shape (list2flatten values)
+
+
+
 main :: IO ()
 main = do 
     x <- return $ (wraplift $ ones [3]) <> (wraplift $ zeros [3])
@@ -180,4 +194,14 @@ main = do
 
     print $ ((ones [2,2])::(NaiveTensor Float))
 
+    let x = list2flatten [1..10]
+        y = reshape [2,5] x 
+    print y
+    print $ size y
     
+    let a = Tensor [(range 0 5), (range 5 10)]
+    print a 
+    let b = flatten a
+    print $ reshape [2,5] b
+
+    print $ fromList [2,5] [1..10]
