@@ -1,6 +1,6 @@
 module NaiveTensor.Broadcast (
             zipcall,
-            bproduct, badd,
+            bproduct, badd, BroadcastableNum(..),
             bsum, squeezeEnd,
             _sumproduct, _sumproductAt,
             listlift, tappend, cartesian
@@ -8,6 +8,7 @@ module NaiveTensor.Broadcast (
 
 import NaiveTensor.NTensor 
 import NaiveTensor.Transpose 
+import GHC.Float (int2Float)
 
 -- ready for sumproduct
 -- previously called bcall 
@@ -29,6 +30,19 @@ bproduct (Leaf x) (Leaf y) = Leaf (x*y)
 badd :: Num a => NaiveTensor a -> NaiveTensor a -> NaiveTensor a 
 badd (Tensor xs) (Tensor ys) = zipcall badd (Tensor xs) (Tensor ys)
 badd (Leaf x) (Leaf y) = Leaf (x+y)
+
+
+class BroadcastableNum a where 
+    (.+) :: a -> a -> a
+    (.-) :: a -> a -> a 
+    (.*) :: a -> a -> a 
+    (./) :: a -> a -> a  
+
+instance (Fractional a) => BroadcastableNum (NaiveTensor a) where 
+    (.+) = badd 
+    (.*) = bproduct
+    (.-) x y = x .+ (fmap ((-1.0)*) y)
+    (./) x y = x .* (fmap (1.0/) y)
 
 
 lsum :: Num a => [NaiveTensor a] -> NaiveTensor a
@@ -97,3 +111,10 @@ main = do
 
     print $ tappend 1 (listlift $ ones [2,2])
     print $ cartesian [["a","b"], ["c", "d"]]
+
+    let a = fromList [3,3] (map int2Float [1..9])
+        b = fromList [3,3] (map int2Float [2..10])
+    print $ a .* b 
+    print $ a .+ b 
+    print $ a .- b 
+    print $ a ./ b
