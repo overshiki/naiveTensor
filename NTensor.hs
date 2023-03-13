@@ -43,6 +43,7 @@ instance Show a => Show (NaiveTensor a) where
             scat x y = x ++ ", " ++ y
             init = "[" ++ (show x) 
             ax = map show xs
+    show (Tensor []) = "Empty"
 
     show Null = "Null"
 
@@ -160,6 +161,7 @@ tselect [] (Leaf x) = x
 get_content :: NaiveTensor a -> a 
 get_content (Leaf x) = x
 
+
 flatten2list :: NaiveTensor a -> [a]
 flatten2list (Tensor ax@((Leaf x):xs)) = map get_content ax
 flatten2list nt@(Tensor ax@((Tensor x):xs)) = flatten2list (flatten nt)
@@ -180,6 +182,8 @@ reshape (x:xs) nt = _rev_reshape (reverse xs) (flatten nt)
 
 fromList :: [Int] -> [a] -> NaiveTensor a 
 fromList shape values = reshape shape (list2flatten values)
+
+
 
 
 

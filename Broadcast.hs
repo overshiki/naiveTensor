@@ -2,7 +2,7 @@ module NaiveTensor.Broadcast (
             zipcall,
             bproduct, badd,
             bsum, squeezeEnd,
-            sumproduct, sumproductAt,
+            _sumproduct, _sumproductAt,
             listlift, tappend, cartesian
 ) where
 
@@ -48,12 +48,15 @@ squeezeEnd (Tensor xs@((Tensor x):a)) = Tensor (map squeezeEnd xs)
 squeezeEnd as@(Tensor (xs@((Leaf x):(Leaf y):a))) = as 
 squeezeEnd (Tensor xs@([Leaf x])) = Leaf x
 
-sumproduct :: Num a => NaiveTensor a -> NaiveTensor a -> NaiveTensor a 
-sumproduct x y = bsum $ bproduct x y
-
 -- do sumproduct at index_a -> index_b -> NT_a -> NT_b 
-sumproductAt :: Num a => Int -> Int -> NaiveTensor a -> NaiveTensor a -> NaiveTensor a
-sumproductAt index_a index_b nt_a nt_b = squeezeEnd $ sumproduct x y 
+-- ATTENTION: this is the normal sumproduct: (x0, x1) @ (y0, y1) -> (x0, y0). Instead, it is defined such that: (x0, x1) @ (y0, y1) -> (x0) where x0==y0, x1==y1. 
+-- TODO: rename this function please
+_sumproduct :: Num a => NaiveTensor a -> NaiveTensor a -> NaiveTensor a 
+_sumproduct x y = bsum $ bproduct x y
+
+ 
+_sumproductAt :: Num a => Int -> Int -> NaiveTensor a -> NaiveTensor a -> NaiveTensor a
+_sumproductAt index_a index_b nt_a nt_b = squeezeEnd $ _sumproduct x y 
         where 
             _size index nt = [0..index-1] ++ [index+1..(ndim nt)-1] ++ [index]
             size_a = _size index_a nt_a
@@ -87,7 +90,7 @@ main = do
     x <- return $ ones [3,4,5]
     y <- return $ ones [5,3,4]
 
-    z <- return $ sumproductAt 2 0 x y 
+    z <- return $ _sumproductAt 2 0 x y 
     print $ size z    
 
     print $ listlift $ ones [2,2]
